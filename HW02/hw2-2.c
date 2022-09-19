@@ -1,7 +1,7 @@
-/* ID: COMP319		>>> REPLACE WITH YOUR ID
- * NAME: Algorithms 1	>>> REPLACE WITH YOUR NAME
- * OS: linux, Ubuntu 16.04
- * Compiler version: gcc 5.4.0 20160609
+/* ID: 2020427681
+ * NAME: Mikolaj Kuranowski
+ * OS: MacOS 12.6
+ * Compiler version: clang 14.0.0
  */
 
 // >>> (10/100) pts
@@ -314,18 +314,30 @@ void bubble_sort_container_arr(struct container *arr, int n) {
 // insertion sort
 /////////////////////////////////////////////////////////////
 void insertion_sort_container_arr(struct container *arr, int n) {
-  (void)arr;
-  (void)n;
-  /* FILL */
+    struct container tmp;
+    for (int i = 1; i < n; ++i) {
+        for (int j = i; j > 0 && compare_container(arr + j - 1, arr + j) > 0; --j) {
+            swap_container(arr + j - 1, arr + j, &tmp);
+        }
+    }
 }
+
 
 /////////////////////////////////////////////////////////////
 // selection sort
 /////////////////////////////////////////////////////////////
 void selection_sort_container_arr(struct container *arr, int n) {
-  (void)arr;
-  (void)n;
-  /* FILL */
+    struct container tmp;
+    for (int i = 0; i < n - 1; ++i) {
+        int j_min = i;
+        for (int j = i + 1; j < n; ++j) {
+            if (compare_container(arr + j, arr + j_min) < 0) {
+                j_min = j;
+            }
+        }
+
+        if (j_min != i) swap_container(arr + j_min, arr + i, &tmp);
+    }
 }
 
 /////////////////////////////////////////////////////////////

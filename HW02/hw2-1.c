@@ -1,7 +1,7 @@
-/* ID: COMP319		>>> REPLACE WITH YOUR ID
- * NAME: Algorithms 1	>>> REPLACE WITH YOUR NAME
- * OS: linux, Ubuntu 16.04
- * Compiler version: gcc 5.4.0 20160609
+/* ID: 2020427681
+ * NAME: Mikolaj Kuranowski
+ * OS: MacOS 12.6
+ * Compiler version: clang 14.0.0
  */
 
 // >>> (10/100) pts
@@ -246,25 +246,47 @@ void bubble_sort_chararr(char **arr, int n) {
   }
 }
 
-/* FILL */
 /* NOTE: addtional funcstions can be defined */
+
+#ifdef __GNUC__
+#  define ALWAYS_INLINE __attribute__((always_inline))
+#else
+#  define ALWAYS_INLINE
+#endif
+
+ALWAYS_INLINE static inline void swap_char_pointer(char** restrict a, char** restrict b) {
+    char* tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
 
 /////////////////////////////////////////////////////////////
 // insertion sort
+// source: https://en.wikipedia.org/wiki/Insertion_sort#Algorithm
 /////////////////////////////////////////////////////////////
 void insertion_sort_chararr(char **arr, int n) {
-  (void)arr;
-  (void)n;
-  /* FILL */
+    for (int i = 1; i < n; ++i) {
+        for (int j = i; j > 0 && strcmp(arr[j - 1], arr[j]) > 0; --j) {
+            swap_char_pointer(arr + j - 1, arr + j);
+        }
+    }
 }
 
 /////////////////////////////////////////////////////////////
 // selection sort
+// source: https://en.wikipedia.org/wiki/Selection_sort#Implementations
 /////////////////////////////////////////////////////////////
 void selection_sort_chararr(char **arr, int n) {
-  (void)arr;
-  (void)n;
-  /* FILL */
+    for (int i = 0; i < n - 1; ++i) {
+        int j_min = i;
+        for (int j = i + 1; j < n; ++j) {
+            if (strcmp(arr[j], arr[j_min]) < 0) {
+                j_min = j;
+            }
+        }
+
+        if (j_min != i) swap_char_pointer(arr + j_min, arr + i);
+    }
 }
 
 /////////////////////////////////////////////////////////////
