@@ -1,14 +1,14 @@
-/* ID: COMP319		>>> REPLACE WITH YOUR ID
- * NAME: Algorithms 1	>>> REPLACE WITH YOUR NAME
- * OS: linux, Ubuntu 18.04 
- * Compiler version: gcc 7.5.0
+/* ID: 2020427681
+ * NAME: Mikolaj Kuranowski
+ * OS: Debian GNU/Linux bookworm
+ * Compiler version: gcc 12.2.0
  */
 
 // HOMEWORK PROGRAMMING ASSIGNMENT 3-3
-// IMPLEMENTATION OF HEAPSORT ON CONTAINER OBJECTS 
+// IMPLEMENTATION OF HEAPSORT ON CONTAINER OBJECTS
 
 // >>> (10/100) pts
-// >>> IN THE TOP 4-LINES COMMENTS 
+// >>> IN THE TOP 4-LINES COMMENTS
 // >>> LINE 1: REPLACE WITH YOUR ID (IF YOU HAVE NON-NUMERIC, IGNORE IT)
 // >>> Line 2: REPLACE WITH YOUR NAME (NO HANGUL)
 // >>> DO NOT CHANGE OS AND Compiler
@@ -21,10 +21,10 @@
 #include<string.h>	// string library
 #include<time.h>	// time library
 
-// the following structure will store the variable-length word into 
+// the following structure will store the variable-length word into
 // the large-sized box, and the location will be random
 // so that reading and writing the word into the container
-// should take CONTAINER_SIZE/2 comparisons on the average 
+// should take CONTAINER_SIZE/2 comparisons on the average
 // --- to intentionally make search and other operations too much slow
 #define CONTAINER_SIZE	4096
 //#define CONTAINER_SIZE	8192
@@ -77,7 +77,7 @@ int compare_container(struct container *a, struct container *b) {
 
 
 // array processing
-void swap_container_arr(struct container C[], int i, int j, 
+void swap_container_arr(struct container C[], int i, int j,
     struct container *temp) {
   swap_container(C+i, C+j, temp);
 }
@@ -90,16 +90,16 @@ int compare_container_arr(struct container C[], int i, int j) {
 
 // <<SAME AS 2-1 and 2-2>>
 // TIME MEASUREMENT USING FUNCTION clock() defined in time.h
-// MEMORY USAGE MEASUREMENT USING malloc_c() AND strdup_c() 
+// MEMORY USAGE MEASUREMENT USING malloc_c() AND strdup_c()
 // WHICH REPLACE THE BUILT-IN FUNCTIONS malloc() and strdup()
 
 #include<stdio.h>
 // TIME
-// THE FOLLOWING FUNCTIONS SHOW HOW TO MEASURE THE EXECUTION TIME 
+// THE FOLLOWING FUNCTIONS SHOW HOW TO MEASURE THE EXECUTION TIME
 // USING A BUILT-IN FUNCTION clock() DEFINED IN time.h
 // NOTE: STATIC VARIABLES ARE NECESSARY TO RECORD CLOCKS
 // USAGE:
-//    reset_timer();	// reset the start time 
+//    reset_timer();	// reset the start time
 //    ....		// statements to measure time
 //    t = elapsed_time_in_sec();
 //    		// time in seconds from when reset_timer() was called
@@ -107,11 +107,11 @@ int compare_container_arr(struct container C[], int i, int j) {
 static clock_t clocks_start;	// global static variable for start clock
 static void reset_timer()
 {
-  clocks_start = clock();	// record the current clock ticks 
+  clocks_start = clock();	// record the current clock ticks
 }
 
 static double elapsed_time_in_sec()
-  // returns time in seconds from the start 
+  // returns time in seconds from the start
 {
   return ((double) (clock() - clocks_start)) / CLOCKS_PER_SEC;
 }
@@ -119,10 +119,10 @@ static double elapsed_time_in_sec()
 // MEMORY
 // Given (allowed): malloc_c(size_t) strdup_c(const char*)
 // Allowed string functions: strcpy, strncpy, strlen, strcmp, strncmp
-// Unallowed memory functions: memcpy, memccpy, memmove, wmemmove, 
+// Unallowed memory functions: memcpy, memccpy, memmove, wmemmove,
 //    or other direct memory copy/move functions
-//    these functions performs 'BLOCKED' operations so that 
-//    a large chunk of memory allocation or move operation are 
+//    these functions performs 'BLOCKED' operations so that
+//    a large chunk of memory allocation or move operation are
 //    efficiently implemented, so they break UNIT TIME assumption
 //    in algorithm design
 // Unallowed string functions: strdup
@@ -131,7 +131,7 @@ static double elapsed_time_in_sec()
 // to compute used memory
 // use malloc_c defined below, instead of malloc, calloc, realloc, etc.
 // malloc_c accumulates the size of the dynamically allocated memory to
-// global/static variable used_memory, so that we can measure the 
+// global/static variable used_memory, so that we can measure the
 // used amount of memory exactly.
 /////////////////////////////////////////////////////////////////////
 static size_t used_memory = 0;	// intial used memory is 0
@@ -258,7 +258,7 @@ struct container *read_container_arr_textfile( const char infile[], int *pN )
 /////////////////////////////////////////////////////////////
 // write words to a text file
 /////////////////////////////////////////////////////////////
-void write_container_arr_textfile( const char outfile[], 
+void write_container_arr_textfile( const char outfile[],
     struct container A[], int N )
   // write the given array of int string words, with its sie N
   // to file whose name given by outfile[]
@@ -297,12 +297,59 @@ void write_container_arr_textfile( const char outfile[],
 /////////////////////////////////////////////////////////////
 // heap sort
 /////////////////////////////////////////////////////////////
+// Source: https://en.wikipedia.org/wiki/Binary_heap
 
-/* FILL: add any necessary functions for your code*/
+struct heap {
+    struct container* data;
+    void(*heapify)(struct heap* heap, int node);
+    int size;
+};
 
-void heap_sort_container_arr(struct container *C, int n)
-{
-  /* FILL */
+void max_heapify(struct heap* heap, int node) {
+    int left = 2 * node + 1;
+    int right = left + 1;
+
+    // Find the biggest node
+    int best = node;
+    if (left < heap->size && compare_container(heap->data + left, heap->data + best) > 0)
+        best = left;
+
+    if (right < heap->size && compare_container(heap->data + right, heap->data + best) > 0)
+        best = right;
+
+    // If the biggest one isn't root - swap and recurse onto the lower level
+    if (best != node) {
+        struct container temp;
+        swap_container(heap->data + node, heap->data + best, &temp);
+        max_heapify(heap, best);
+    }
+}
+
+void create_heap(struct heap* heap) {
+    for (int i = heap->size/2; i >= 0; --i)
+        heap->heapify(heap, i);
+}
+
+void extract_from_heap(struct heap* heap) {
+    // Swap first and last
+    struct container temp;
+    swap_container(heap->data, heap->data + heap->size - 1, &temp);
+
+    // Fix the heap
+    --heap->size;
+    heap->heapify(heap, 0);
+}
+
+void heap_sort_container_arr(struct container* arr, int arr_size) {
+    struct heap h = {
+        .data = arr,
+        .heapify = max_heapify,
+        .size = arr_size,
+    };
+
+    create_heap(&h);
+    for (int i = 0; i < arr_size-1; ++i)
+        extract_from_heap(&h);
 }
 
 /////////////////////////////////////////////////////////////
