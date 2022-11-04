@@ -1,0 +1,219 @@
+Programming Assignment 4. Binary search tree using doubly-linked lists
+ COMP319 Algorithms, Fall 2022
+ School of Electronics Engineering, Kyungpook National University
+ Gil-Jin Jang
+
+------------------------------------------------------------------- 
+1. Data structure description
+
+Define a binary tree node with char array key as follows:
+
+#define KEYLENGTH	3
+#define BULK_SIZE	4096
+struct BTNode {	
+  char bulk[BULK_SIZE];
+  struct BTNode *left, *right;
+};
+
+- key is a character string with length KEYLENGTH
+  (ex: "abc", "123", ...)
+  The key is hidden in "bulk" in random location. 
+  To search a key value, the number of average search count is BULK_SIZE/2 
+- left, right are pointers to left subtree, right subtree, repectively.
+
+
+------------------------------------------------------------------- 
+2. Definitions of given functions
+
+const char* getkey(struct BTNode *a);
+- no direct access to the key is allowed. 
+  To read the value of a key, use this function.
+
+int setkey(struct BTNode *a, const char kw[]);
+- the key value of a node can only be changed by this function.
+
+int copykey(struct BTNode *dst, struct BTNode *src) 
+{ return setkey(dst,getkey(src)); }
+- copy the key value of one note to the other.
+
+int comparekey(struct BTNode *a, struct BTNode *b);
+// return value: (by character comparison)
+//  -1 if a's key < b's key
+//  0 if a's key == b's key
+//  +1 if a's key > b's key
+- compares the values of keys
+
+struct BTNode *generate_btnode(const char kw[]);
+- create a node with the given key value
+
+void free_bt_recursive (struct BTNode *bt);
+- frees all tree nodes
+
+struct BTNode *copy_bt_recursive (struct BTNode *bt);
+- copy a tree recursively.
+
+struct BTNode *insert_left_bcnode(struct BTNode *parent, struct BTNode *newPtr );
+- insert a node to the left of the root note. Used when creating LHBT (left-half binary tree).
+
+struct BTNode *readkeys_textfile_LHBT( const char infile[], int *pN );
+- read a text file and create an LHBT (left-half binary tree), and return it.
+
+/////////////////////////////////////////////////////////////
+// FILL 1: generate a binary search tree using insertion
+/////////////////////////////////////////////////////////////
+struct BTNode *insert_to_BST_leaf(struct BTNode *bst, struct BTNode *newPtr)
+{
+  if ( bst == NULL ) return newPtr;	// new bst as the input node
+  else if ( newPtr == NULL ) return bst;	// nothing to add
+  else {
+    if ( comparekey(bst, newPtr) < 0 ) {
+      /* FILL */
+    }
+    else {
+      /* FILL */
+    }
+  }
+  return bst;
+}
+
+struct BTNode *generate_BST_by_insertion(struct BTNode *lhbt)
+{
+  /* FILL */
+  /* (hint: use insert_to_BST_leaf repeatedly) */
+}
+
+
+------------------------------------------------------------------- 
+3. output example
+
+Ex) input/i9.txt -> output/o9.txt
+
+=====================================
+100-400-000-800-900-800-500-700-900
+total 9 nodes
+=====================================
+000 100 400 500 700 800 800 900 900 
+total 9 nodes (sorted)
+=====================================
+            900
+                900
+        800
+            800
+                    700
+                500
+    400
+100
+    000
+BST height 6
+=====================================
+        900
+    900
+        800
+800
+        700
+    500
+            400
+        100
+            000
+Complete BST height 4
+=====================================
+TIME 0.00042 seconds
+
+more examples in output folder
+
+
+------------------------------------------------------------------- 
+4. To implement
+
+1) function to generate a BST (bineary search tree) by single item insertion operations
+
+struct BTNode *insert_to_BST_leaf(struct BTNode *bst, struct BTNode *newPtr)
+- find an appropriate location in a binary search tree and insert to the left node
+
+struct BTNode *generate_BST_by_insertion(struct BTNode *lhbt)
+- From the given LHBT (single linked list), extract a node and insert it to a BST.
+
+
+2) display a BST in a sorted order
+=====================================
+000 100 400 500 700 800 800 900 900 
+total 9 nodes (sorted)
+=====================================
+int print_BST_sortedorder(FILE *fp, struct BTNode *bst, int level)
+  // (hint: inorder traversal)
+  // INPUT
+  //   fp: stdout for monitor
+  //   bst: root node of the BST, should satisfy the property of
+  //      binary search tree, left <= center < right
+  //   level: the level of the current bst. starting from 0, may not be necessary
+  // RETURNs number of NODES in the list
+
+
+3) diaplay a BST (left is parent)
+=====================================
+            900
+                900
+        800
+            800
+                    700
+                500
+    400
+100
+    000
+BST height 6
+=====================================
+int print_BST_right_center_left(FILE *fp, struct BTNode *bst, int level)
+  // INPUT
+  //   (same as print_BST_sortedorder)
+  // RETURNs HEIGHT-1 of the printed tree (2 in the above example)
+  //   (hint: printing order is right -> center -> left
+  //    carefully count the number of spaces)
+* hint: from the top, the display order is right -> center -> left
+
+
+4) convert a BST to a complete BST, to reduce the height
+=====================================
+        900
+    900
+        800
+800
+        700
+    500
+            400
+        100
+            000
+Complete BST height 4
+=====================================
+struct BTNode *BST_to_completeBST(struct BTNode *bst, int numNodes)
+  // convert a BST to complete BST (minimum height, filling in left first)
+  // INPUT
+  //   bst: root node of the BST, should satisfy the property of
+  //      binary search tree, left <= center < right
+  //   numNodes: number of nodes in the bst
+  //      if not necessary in your implementation, do not have to use it  
+  // RETURNs a COMPLETE BST 
+  // (hint: using extra memory (arrays or lists) may help,
+  //  array's rule for parent-child, sorted list, etc.)
+* hint: extra array can be used to strore a complete binary tree 
+
+5) challenge assignment
+- the example BST print function displays one item per line, so wasting too much space. 
+  Try writinge your own BST print function to save lines. 
+  You may start by modifying the function print_BST_right_center_left. 
+
+
+------------------------------------------------------------------- 
+5. Grading
+- Use "bst_template.c" in hw4_template.zip 
+- focus on "FILL" parts
+- input examples: "input/i___.txt"
+- output examples: "output/o___.txt"
+  your code output should match them
+- Grading scheme
+  Submission 10%
+  Correctness 40%
+  "5" challenge assignment 20%
+  Execution time 20%
+  Code reading 10%
+  Copy ==> x0 
+
