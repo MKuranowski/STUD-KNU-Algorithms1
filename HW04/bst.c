@@ -209,41 +209,64 @@ int print_BST_right_center_left(FILE* fp, struct BTNode* bst, int level) {
 
 // Compressed BST printing (task 5)
 
+/// Defines the max length of a prefix that can be passed to print_bst_compressed
 #define MAX_PREFIX_LEN 512
 
+/// Defines the max length of the string contained in the single BTNode.
+/// All the example inputs use 3-char strings, but for larger examples it might be desirable to
+/// increase this constant.
+#define NODE_CONTENT_LEN 3
+
 void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
+    // Base recursive case
     if (!root) return;
-    assert(prefix);
 
-    fputs(getkey(root), fp);
+    // Always start by simply printing the node, ensuring it occupies NODE_CONTENT_LEN columns
+    fprintf(fp, "%*s", NODE_CONTENT_LEN, getkey(root));
 
+    // Recursively print all the right children on the same line
     if (root->right) {
+        // Generate a new prefix, used when printing left subtree of the right child.
+        // The new prefix is a concatenation of the current prefix,
+        // padding to offset printing current node content (NODE_CONTENT_LEN spaces),
+        // and then more padding to offset the horizontal bar, with an optional
+        // vertical bar going to current node's left subtree.
         char new_prefix[MAX_PREFIX_LEN];
-        int new_prefix_len =
-            snprintf(new_prefix, MAX_PREFIX_LEN, "%s    %s ", prefix, root->left ? "│" : " ");
+        int new_prefix_len = snprintf(new_prefix, MAX_PREFIX_LEN, "%s%*s %s ", prefix,
+                                      NODE_CONTENT_LEN, "", root->left ? "│" : " ");
         if (new_prefix_len + 1 == MAX_PREFIX_LEN) {
             fputs("prefix overflow\n", stderr);
             abort();
         }
 
+        // Print the horizontal bar to the right child
         fputs(root->left ? "─┬─" : "───", fp);
+
+        // Recursively print the string of right-children
         print_bst_compressed(fp, root->right, new_prefix);
     } else {
+        // End of the recursive printing on the same line - no more right sub-trees.
+        // Either put a newline (when visiting a leaf node), or a connector
+        // to the left node.
         fputs(root->left ? "─┐\n" : "\n", fp);
     }
 
+    // Recursively print the left subtree
     if (root->left) {
+        // Generate a new prefix, used when printing left subtree of the left child.
+        // The new prefix is a concatenation of the current prefix,
+        // padding to offset printing current node content (NODE_CONTENT_LEN spaces),
+        // and more padding to offset the horizontal bar.
         char new_prefix[MAX_PREFIX_LEN];
         int new_prefix_len =
-            snprintf(new_prefix, MAX_PREFIX_LEN, "%s      ", prefix);
+            snprintf(new_prefix, MAX_PREFIX_LEN, "%s%*s   ", prefix, NODE_CONTENT_LEN, "");
         if (new_prefix_len + 1 == MAX_PREFIX_LEN) {
             fputs("prefix overflow\n", stderr);
             abort();
         }
 
-        fputs(prefix, fp);
-        fputs("   ", fp);
-        fputs(" └─", fp);
+        // Output the current prefix and recursively print the left subtree with the new prefix.
+        fprintf(fp, "%s%*s └─", prefix, NODE_CONTENT_LEN, "");
         print_bst_compressed(fp, root->left, new_prefix);
     }
 }
