@@ -191,7 +191,6 @@ int print_BST_sortedorder(FILE* fp, struct BTNode* bst, int level) {
 //   (hint: printing order is right -> center -> left
 //    carefully count the number of spaces)
 int print_BST_right_center_left(FILE* fp, struct BTNode* bst, int level) {
-    // TODO: Compress the tree (wtf)
     if (!bst) return 0;
 
     int height = 1;
@@ -206,6 +205,47 @@ int print_BST_right_center_left(FILE* fp, struct BTNode* bst, int level) {
     if (subtree_height > height) height = subtree_height;
 
     return height;
+}
+
+// Compressed BST printing (task 5)
+
+#define MAX_PREFIX_LEN 512
+
+void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
+    if (!root) return;
+    assert(prefix);
+
+    fputs(getkey(root), fp);
+
+    if (root->right) {
+        char new_prefix[MAX_PREFIX_LEN];
+        int new_prefix_len =
+            snprintf(new_prefix, MAX_PREFIX_LEN, "%s    %s ", prefix, root->left ? "│" : " ");
+        if (new_prefix_len + 1 == MAX_PREFIX_LEN) {
+            fputs("prefix overflow\n", stderr);
+            abort();
+        }
+
+        fputs(root->left ? "─┬─" : "───", fp);
+        print_bst_compressed(fp, root->right, new_prefix);
+    } else {
+        fputs(root->left ? "─┐\n" : "\n", fp);
+    }
+
+    if (root->left) {
+        char new_prefix[MAX_PREFIX_LEN];
+        int new_prefix_len =
+            snprintf(new_prefix, MAX_PREFIX_LEN, "%s      ", prefix);
+        if (new_prefix_len + 1 == MAX_PREFIX_LEN) {
+            fputs("prefix overflow\n", stderr);
+            abort();
+        }
+
+        fputs(prefix, fp);
+        fputs("   ", fp);
+        fputs(" └─", fp);
+        print_bst_compressed(fp, root->left, new_prefix);
+    }
 }
 
 /////////////////////////////////////////////////////////////
@@ -350,6 +390,9 @@ int main(int argc, char* argv[]) {
         bst1 = BST_to_completeBST(bst1, numNodes);
         lev = print_BST_right_center_left(fp, bst1, 0);
         fprintf(fp, "Complete BST height %d\n", lev);
+        fprintf(fp, "=====================================\n");
+        print_bst_compressed(fp, bst1, "");
+        fprintf(fp, "Compressed BST printing\n");
         fprintf(fp, "=====================================\n");
 
         free_bt_recursive(root);
