@@ -256,7 +256,8 @@ void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
         // End of the recursive printing on the same line - no more right sub-trees.
         // Either put a newline (when visiting a leaf node), or a connector
         // to the left node.
-        fputs(root->left ? LINE_TO_BOTTOM "\n" : "\n", fp);
+        if (root->left) fputs(LINE_TO_BOTTOM, fp);
+        fputc('\n', fp);
     }
 
     // Recursively print the left subtree
@@ -274,7 +275,7 @@ void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
         }
 
         // Output the current prefix and recursively print the left subtree with the new prefix.
-        fprintf(fp, "%s%*s" LINE_FROM_TOP, prefix, NODE_CONTENT_LEN, "");
+        fprintf(fp, "%s%*s%s", prefix, NODE_CONTENT_LEN, "", LINE_FROM_TOP);
         print_bst_compressed(fp, root->left, new_prefix);
     }
 }
