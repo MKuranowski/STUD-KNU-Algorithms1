@@ -217,6 +217,14 @@ int print_BST_right_center_left(FILE* fp, struct BTNode* bst, int level) {
 /// increase this constant.
 #define NODE_CONTENT_LEN 3
 
+/// Constant strings used for drawing lines between nodes
+
+#define LINE_VERTICAL u8"\u2502"                       // Vertical
+#define LINE_HORIZONTAL u8"\u2500\u2500\u2500"         // Horizontal, Horizontal, Horizontal
+#define LINE_HORIZONTAL_BRANCH u8"\u2500\u252C\u2500"  // Horizontal, Down + Horizontal, Horizontal
+#define LINE_FROM_TOP u8" \u2514\u2500"                // Space, Up + Right, Horizontal
+#define LINE_TO_BOTTOM u8"\u2500\u2510"                // Horizontal, Left + Down
+
 void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
     // Base recursive case
     if (!root) return;
@@ -233,14 +241,14 @@ void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
         // vertical bar going to current node's left subtree.
         char new_prefix[MAX_PREFIX_LEN];
         int new_prefix_len = snprintf(new_prefix, MAX_PREFIX_LEN, "%s%*s %s ", prefix,
-                                      NODE_CONTENT_LEN, "", root->left ? "│" : " ");
+                                      NODE_CONTENT_LEN, "", root->left ? LINE_VERTICAL : " ");
         if (new_prefix_len + 1 == MAX_PREFIX_LEN) {
             fputs("prefix overflow\n", stderr);
             abort();
         }
 
         // Print the horizontal bar to the right child
-        fputs(root->left ? "─┬─" : "───", fp);
+        fputs(root->left ? LINE_HORIZONTAL_BRANCH : LINE_HORIZONTAL, fp);
 
         // Recursively print the string of right-children
         print_bst_compressed(fp, root->right, new_prefix);
@@ -248,7 +256,7 @@ void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
         // End of the recursive printing on the same line - no more right sub-trees.
         // Either put a newline (when visiting a leaf node), or a connector
         // to the left node.
-        fputs(root->left ? "─┐\n" : "\n", fp);
+        fputs(root->left ? LINE_TO_BOTTOM "\n" : "\n", fp);
     }
 
     // Recursively print the left subtree
@@ -266,7 +274,7 @@ void print_bst_compressed(FILE* fp, struct BTNode* root, char const* prefix) {
         }
 
         // Output the current prefix and recursively print the left subtree with the new prefix.
-        fprintf(fp, "%s%*s └─", prefix, NODE_CONTENT_LEN, "");
+        fprintf(fp, "%s%*s" LINE_FROM_TOP, prefix, NODE_CONTENT_LEN, "");
         print_bst_compressed(fp, root->left, new_prefix);
     }
 }
