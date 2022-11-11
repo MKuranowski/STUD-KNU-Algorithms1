@@ -50,12 +50,12 @@ char const* getkey(struct BTNode* a);
 //  so try to use it as rarely as possible
 
 // return value: 0 for failure (NULL a), 1 for success
-int setkey(struct BTNode* a, char const kw[]);
+int setkey_bst(struct BTNode* a, char const kw[]);
 //  the following function hides a string "kw" of KEYLENGTH
 //  by randomly selecting the location to save key
 
 // copies the key of one node to the other
-int copykey(struct BTNode* dst, struct BTNode* src) { return setkey(dst, getkey(src)); }
+int copykey(struct BTNode* dst, struct BTNode* src) { return setkey_bst(dst, getkey(src)); }
 // very simple, single line, so implementation is given here
 
 // return value: (by character comparison)
@@ -444,7 +444,7 @@ char const* getkey(struct BTNode* a) {
     return NULL;  // not found
 }
 
-int setkey(struct BTNode* a, char const kw[]) {
+int setkey_bst(struct BTNode* a, char const kw[]) {
     int pos;
     if (a != NULL) {
         // fill with 0
@@ -465,7 +465,7 @@ struct BTNode* generate_btnode(char const kw[]) {
     struct BTNode* tmp;
 
     tmp = (struct BTNode*)malloc(sizeof(struct BTNode));
-    setkey(tmp, kw);
+    setkey_bst(tmp, kw);
 
     // initial left and right children for the generated leaf node
     tmp->left = tmp->right = NULL;
