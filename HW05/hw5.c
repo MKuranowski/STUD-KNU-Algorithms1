@@ -83,13 +83,6 @@ void load_points(FILE* f) {
 
     // Sort points (needed for fast evaluation of whether to add a node to a queue)
     qsort(points, points_len, sizeof(Point), compare_points);
-
-    // Ensure first point is (0, 0)
-    if (points[0].x != 0.0 || points[0].y != 0.0) exit_with_message("First point must be (0, 0)");
-
-    // Ensure last point is (100, 100)
-    // if (points[points_len - 1].x != 100.0 || points[points_len - 1].y != 100.0)
-    // exit_with_message("Last point must be (100, 100)");
 }
 
 // Data structures for (modified) Dijkstra algorithm
@@ -381,7 +374,8 @@ SearchEntry find_solution(unsigned short start, unsigned short end, float max_fu
 
 // Entry point
 
-static float max_fuels[] = {300.0f, 450.0f, 850.0f, 1150.0f, 0.0f};
+// static float max_fuels[] = {300.0f, 450.0f, 850.0f, 1150.0f, 0.0f};
+static float max_fuels[] = {29.0f, 45.0f, 77.0f, 150.0f, 0.0f};
 
 int main(int argc, char** argv) {
     // Get the input file
@@ -418,7 +412,6 @@ int main(int argc, char** argv) {
             printf("%.0f %.0f\t", points[solution[i]].x, points[solution[i]].y);
         }
         fputc('\n', stdout);
-
         printf("%.5f seconds\n\n", (float)elapsed / CLOCKS_PER_SEC);
     }
 
