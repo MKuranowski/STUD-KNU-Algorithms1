@@ -67,7 +67,8 @@ static inline void heap_swap(Heap* h, size_t i, size_t j) {
 }
 
 static inline int heap_cmp(Heap* h, size_t i, size_t j) {
-    return h->compare_elements(h->context, h->data + i * h->element_size, h->data + j * h->element_size);
+    return h->compare_elements(h->context, h->data + i * h->element_size,
+                               h->data + j * h->element_size);
 }
 
 void heap_sift_down(Heap* h, size_t index) {

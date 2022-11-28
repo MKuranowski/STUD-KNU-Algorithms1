@@ -34,7 +34,8 @@ static inline void dijkstra_set_idx(DijkstraSearch* s, SearchNode const n, unsig
     s->queue_indices[n.point_index][n.nodes_visited] = idx;
 }
 
-static inline void dijkstra_set_prev(DijkstraSearch* s, SearchNode const start, SearchNode const end) {
+static inline void dijkstra_set_prev(DijkstraSearch* s, SearchNode const start,
+                                     SearchNode const end) {
     s->previous[end.point_index][end.nodes_visited] = start;
 }
 
@@ -131,7 +132,8 @@ void dijkstra_init(DijkstraSearch* s, unsigned short total_points,
     s->get_edge_context = edge_getter_ctx;
 }
 
-static void dijkstra_reconstruct_path(DijkstraSearch* s, DijkstraSearchResult* into, SearchNode end) {
+static void dijkstra_reconstruct_path(DijkstraSearch* s, DijkstraSearchResult* into,
+                                      SearchNode end) {
     into->route_length = end.nodes_visited;
     do {
         into->route[end.nodes_visited - 1] = end.point_index;
