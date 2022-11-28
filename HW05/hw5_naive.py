@@ -29,6 +29,7 @@ def load_points(f: Iterator[str]) -> list[Point]:
     points = [tuple(map(float, i.strip().split())) for i in f]
     assert len(points) == expected_len
     assert all(len(pt) == 2 for pt in points)
+    points.sort()
     return points
 
 
