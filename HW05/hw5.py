@@ -112,7 +112,8 @@ class DijkstraSearch:
                 return entry.fuel_used, self.reconstruct_route(entry.node)
 
             # NOTE: deliberately not setting entry.deleted = True
-            #       thanks to that we don't need to track visited nodes
+            #       thanks to that, self.entries can do double duty as a set
+            #       of visited nodes.
 
             for next in range(entry.point+1, len(self.pts)):
                 next_entry = DijkstraSearchEntry(
