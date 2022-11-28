@@ -75,7 +75,7 @@ void recalculate_point_distances(void) {
     for (unsigned from = 0; from < points_len; ++from) {
         for (unsigned to = 0; to < points_len; ++to) {
             if (from > to) {
-                point_distances[from][to] = HUGE_VALF;
+                point_distances[from][to] = INFINITY;
             } else if (from == to) {
                 point_distances[from][to] = 0;
             } else {
@@ -237,7 +237,7 @@ void* nss_worker(void* arg) {
         // Calculate the total used fuel
         bool admissable = true;
         for (unsigned i = 1; admissable && i < guess.length; ++i) {
-            guess.used_fuel += point_distances[i - 1][i];
+            guess.used_fuel += point_distances[guess.points[i - 1]][guess.points[i]];
             admissable = guess.used_fuel < nss->max_fuel;
         }
 
