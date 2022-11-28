@@ -112,18 +112,21 @@ void load_points(FILE* f) {
 typedef struct {
     unsigned pool_length;
     unsigned combination_length;
+    unsigned index_offset;
+
     unsigned indices[0];
 } Combinator;
 
 void initialize_combinator(Combinator* c, unsigned combination_length) {
     c->combination_length = combination_length;
-    for (unsigned i = 0; i < c->combination_length; ++i) c->indices[i] = i;
+    for (unsigned i = 0; i < c->combination_length; ++i) c->indices[i] = i + c->index_offset;
 }
 
 Combinator* new_combinator(unsigned pool_length, unsigned combination_length) {
     if (combination_length > pool_length) return NULL;
 
     Combinator* c = malloc(sizeof(Combinator) + sizeof(unsigned) * combination_length);
+    c->index_offset = 0;
     c->pool_length = pool_length;
     initialize_combinator(c, combination_length);
     return c;
@@ -134,7 +137,7 @@ bool next_combination(Combinator* c) {
 
     unsigned i = c->combination_length - 1;
     for (; i != UINT_MAX; --i) {
-        if (c->indices[i] != i + c->pool_length - c->combination_length) break;
+        if (c->indices[i] - c->index_offset != i + c->pool_length - c->combination_length) break;
     }
 
     // No new combination
@@ -229,10 +232,9 @@ void* nss_worker(void* arg) {
         guess.used_fuel = 0.0f;
 
         // Initialize guess points
-        unsigned i = 0;
-        guess.points[i++] = 0;
-        for (unsigned j = 0; j < through_len; ++j) guess.points[i++] = through[j] + 1;
-        guess.points[i++] = points_len - 1;
+        guess.points[0] = 0;
+        memcpy(guess.points + 1, through, sizeof(unsigned) * through_len);
+        guess.points[guess.length - 1] = points_len - 1;
 
         // Calculate the total used fuel
         bool admissable = true;
@@ -256,6 +258,7 @@ void nss_init(NaiveSearchState* nss) {
     nss->done_cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
 
     nss->c = new_combinator(points_len - 2, points_len - 2);
+    nss->c->index_offset = 1;
     initialize_combinator(nss->c, 0);
 
     nss->best.length = 2;
