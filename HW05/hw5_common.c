@@ -1,3 +1,9 @@
+/*
+ * ID: 2020427681
+ * NAME: Mikolaj Kuranowski
+ * OS: Debian 11
+ * Compiler version: gcc 12.2.0
+ */
 #include "hw5_common.h"
 
 #include <stdbool.h>
@@ -12,6 +18,9 @@ noreturn void exit_with_message(char const* msg) {
     fputc('\n', stderr);
     exit(1);
 }
+
+extern inline int compare_int_directly(int a, int b);
+extern inline int compare_float_directly(float a, float b);
 
 // Point-related helpers
 
@@ -63,12 +72,11 @@ static inline void heap_swap(Heap* h, size_t i, size_t j) {
     assert(j < h->length);
 
     memswap(h->data + i * h->element_size, h->data + j * h->element_size, h->element_size);
-    if (h->after_swap) h->after_swap(h->context, i, j);
+    if (h->after_swap) h->after_swap(i, j);
 }
 
 static inline int heap_cmp(Heap* h, size_t i, size_t j) {
-    return h->compare_elements(h->context, h->data + i * h->element_size,
-                               h->data + j * h->element_size);
+    return h->compare_elements(h->data + i * h->element_size, h->data + j * h->element_size);
 }
 
 void heap_sift_down(Heap* h, size_t index) {

@@ -1,3 +1,9 @@
+/*
+ * ID: 2020427681
+ * NAME: Mikolaj Kuranowski
+ * OS: Debian 11
+ * Compiler version: gcc 12.2.0
+ */
 #pragma once
 
 #include <assert.h>
@@ -12,6 +18,9 @@
  * then terminates the program by calling exit
  */
 noreturn void exit_with_message(char const* msg);
+
+inline int compare_int_directly(int a, int b) { return (a > b) - (a < b); }
+inline int compare_float_directly(float a, float b) { return (a > b) - (a < b); }
 
 // Point-related features
 
@@ -56,13 +65,13 @@ void load_points(FILE* f, Point points[MAX_POINTS_LEN], unsigned* length);
  * - zero when a == b
  * - positive number when a > b
  */
-typedef int (*heap_comparator)(void* context, void const* a, void const* b);
+typedef int (*heap_comparator)(void const* a, void const* b);
 
 /**
  * heap_swap_handler is called after 2 elements from the heap were swapped.
  * It may be set to null. The first argument is passed through from `heap.context`
  */
-typedef void (*heap_swap_handler)(void*, size_t, size_t);
+typedef void (*heap_swap_handler)(size_t, size_t);
 
 /**
  * Heap is a data structure, such that `heap.data[0]` is always the smallest element.
@@ -78,7 +87,6 @@ typedef struct {
 
     heap_comparator compare_elements;
     heap_swap_handler after_swap;
-    void* context;
 } Heap;
 
 /**
