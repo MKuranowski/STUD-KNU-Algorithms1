@@ -57,7 +57,7 @@ class DijkstraSearchEntry:
         return DijkstraSearchNode(self.point, self.nodes_visited)
 
     def __eq__(self, o: object) -> bool:
-        return isinstance(o, DijkstraSearchEntry) and self.node ==  o.node
+        return isinstance(o, DijkstraSearchEntry) and self.node == o.node
 
     def __lt__(self, o: "DijkstraSearchEntry") -> bool:
         # return True if `self` is better than `o`
@@ -95,12 +95,14 @@ class DijkstraSearch:
 
     def do(self) -> tuple[float, list[int]]:
         end = len(self.pts) - 1
-        self.queue = [DijkstraSearchEntry(
+        self.queue = [
+            DijkstraSearchEntry(
             point=0,
             nodes_visited=1,
             nodes_to_visit=end,
             total_cost=0.0,
-        )]
+            )
+        ]
         self.entries = {self.queue[0].node: self.queue[0]}
         self.previous.clear()
 
@@ -111,14 +113,16 @@ class DijkstraSearch:
                 continue
 
             # End reached
-            if entry.point == end and (self.max_length is None or entry.nodes_visited == self.max_length):
+            if entry.point == end and (
+                self.max_length is None or entry.nodes_visited == self.max_length
+            ):
                 return entry.total_cost, self.reconstruct_route(entry.node)
 
             # NOTE: deliberately not setting entry.deleted = True
             #       thanks to that, self.entries can do double duty as a set
             #       of visited nodes.
 
-            for next in range(entry.point+1, len(self.pts)):
+            for next in range(entry.point + 1, len(self.pts)):
                 next_entry = DijkstraSearchEntry(
                     point=next,
                     nodes_visited=entry.nodes_visited + 1,
@@ -135,7 +139,11 @@ class DijkstraSearch:
                 # Check if we have an entry to this node
                 existing = self.entries.get(next_entry.node)
 
-                if existing and not existing.deleted and next_entry.total_cost > existing.total_cost:
+                if (
+                    existing
+                    and not existing.deleted
+                    and next_entry.total_cost > existing.total_cost
+                ):
                     # We already have ann entry and it's cheaper
                     continue
                 elif existing:
