@@ -253,8 +253,8 @@ void priority_search_solution(float max_cost, unsigned short max_length) {
 #define MAX_LEN NO_MAX_LEN
 #endif
 
-static float max_costs[] = {29.0, 45.0, 77.0, 150.0};  // for 20 points
-// static float max_costs[] = {300.0, 450.0, 850.0, 1150.0};  // for 100 points
+// static float max_costs[] = {29.0, 45.0, 77.0, 150.0};  // for 20 points
+static float max_costs[] = {300.0, 450.0, 850.0, 1150.0};  // for 100 points
 
 static float max_costs_len = sizeof(max_costs) / sizeof(max_costs[0]);
 

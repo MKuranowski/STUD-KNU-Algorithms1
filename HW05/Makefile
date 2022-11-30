@@ -8,7 +8,7 @@ clean:
 	rm -f hw5_1 hw5_2
 
 hw5_1: hw5_common.c hw5_1and2.c
-	$(CC) $(CFLAGS) -DMAX_LEN=8 -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -DMAX_LEN=30 -o $@ $^ $(LDFLAGS)
 
 hw5_2: hw5_common.c hw5_1and2.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
