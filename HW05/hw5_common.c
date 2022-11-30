@@ -59,24 +59,23 @@ void load_points(FILE* f, Point points[MAX_POINTS_LEN], unsigned* length) {
 
 // Heap-related helpers
 
-void memswap(void* restrict a, void* restrict b, size_t bytes) {
-    char tmp[bytes];
-    memcpy(tmp, a, bytes);
-    memcpy(a, b, bytes);
-    memcpy(b, tmp, bytes);
-}
-
 static inline void heap_swap(Heap* h, size_t i, size_t j) {
     assert(i != j);
     assert(i < h->length);
     assert(j < h->length);
 
-    memswap(h->data + i * h->element_size, h->data + j * h->element_size, h->element_size);
-    if (h->after_swap) h->after_swap(i, j);
+    void* tmp = h->data[i];
+    h->data[i] = h->data[j];
+    h->data[j] = tmp;
+
+    if (h->on_index_update) {
+        h->on_index_update(h->data[i], i);
+        h->on_index_update(h->data[j], j);
+    }
 }
 
 static inline int heap_cmp(Heap* h, size_t i, size_t j) {
-    return h->compare_elements(h->data + i * h->element_size, h->data + j * h->element_size);
+    return h->compare_elements(h->data[i], h->data[j]);
 }
 
 void heap_sift_down(Heap* h, size_t index) {
@@ -117,19 +116,19 @@ void heap_sift_up(Heap* h, size_t index) {
     }
 }
 
-void heap_push(Heap* restrict h, void* restrict element) {
+void heap_push(Heap* h, void* element) {
     assert(h->length < h->capacity);
 
-    memcpy(h->data + h->length * h->element_size, element, h->element_size);
-    ++h->length;
+    if (h->on_index_update) h->on_index_update(element, h->length);
+    h->data[h->length++] = element;
 
     heap_sift_up(h, h->length - 1);
 }
 
-void heap_pop(Heap* restrict h, void* restrict target, size_t index) {
+void* heap_pop(Heap* h, size_t index) {
     assert(index < h->length);
 
-    memcpy(target, h->data + index * h->element_size, h->element_size);
+    void* popped = h->data[index];
 
     // No need to restore heap invariant if last element was removed
     if (h->length - 1 != index) {
@@ -139,4 +138,7 @@ void heap_pop(Heap* restrict h, void* restrict target, size_t index) {
     } else {
         --h->length;
     }
+
+    if (h->on_index_update) h->on_index_update(popped, (size_t)-1);
+    return popped;
 }

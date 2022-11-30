@@ -22,6 +22,12 @@ typedef struct {
     unsigned short nodes_visited;
 } Node;
 
+typedef struct {
+    Node nd;  // NOTE: nd must be first to ensure (Entry*) can be casted to (Node*)
+    float total_cost;
+    unsigned queue_index;
+} Entry;
+
 // Priority search related state
 
 #define INVALID_INDEX UINT_MAX
@@ -38,9 +44,8 @@ static unsigned short max_length = MAX_LEN;
 static unsigned short max_length = NO_MAX_LEN;
 #endif
 
-static Node queue_data[QUEUE_CAPACITY];
-static unsigned entry_indices[MAX_POINTS_LEN][MAX_POINTS_LEN];
-static float total_costs[MAX_POINTS_LEN][MAX_POINTS_LEN];
+static void* queue_data[QUEUE_CAPACITY];
+static Entry entries[MAX_POINTS_LEN][MAX_POINTS_LEN];
 static Node previous[MAX_POINTS_LEN][MAX_POINTS_LEN];
 
 static struct {
@@ -51,24 +56,13 @@ static struct {
 
 // Priority search
 
-static inline unsigned get_entry_index(Node n) {
-    return entry_indices[n.point_index][n.nodes_visited];
-}
-static inline void set_entry_index(Node n, unsigned v) {
-    entry_indices[n.point_index][n.nodes_visited] = v;
-}
-
-static inline float get_total_cost(Node n) { return total_costs[n.point_index][n.nodes_visited]; }
-static inline void set_total_cost(Node n, float v) {
-    total_costs[n.point_index][n.nodes_visited] = v;
-}
-
+static inline Entry* get_entry(Node n) { return &entries[n.point_index][n.nodes_visited]; }
 static inline Node get_previous(Node to) { return previous[to.point_index][to.nodes_visited]; }
 static inline void set_previous(Node to, Node from) {
     previous[to.point_index][to.nodes_visited] = from;
 }
 
-int compare_nodes(Node const* a, Node const* b) {
+int compare_entries(Entry const* a, Entry const* b) {
     // To ensure we get the best candidate in main Dijkstra loop, we need
     // the comparison to prefer the following properties, in order:
     // 1. More nodes can be visited
@@ -77,28 +71,32 @@ int compare_nodes(Node const* a, Node const* b) {
     //
     // Since we'll be implementing a min-heap; this function should
     // return -1 if a is better than b; 1 if b is better than a or 0 if there are the same.
-    unsigned a_to_visit = points_len - a->point_index - 1;
-    unsigned b_to_visit = points_len - b->point_index - 1;
+    unsigned a_to_visit = points_len - a->nd.point_index - 1;
+    unsigned b_to_visit = points_len - b->nd.point_index - 1;
 
-    if (a_to_visit == b_to_visit && a->nodes_visited == b->nodes_visited) {
+    if (a_to_visit == b_to_visit && a->nd.nodes_visited == b->nd.nodes_visited) {
         // Case 3: compare used fuel
-        return compare_float_directly(get_total_cost(*a), get_total_cost(*b));
+        return compare_float_directly(a->total_cost, b->total_cost);
     } else if (a_to_visit == b_to_visit) {
         // Case 2: compare visited nodes
-        return compare_int_directly(b->nodes_visited, a->nodes_visited);
+        return compare_int_directly(b->nd.nodes_visited, a->nd.nodes_visited);
     } else {
         // Case 1: compare nodes that can be (potentially) visited
         return compare_int_directly(b_to_visit, a_to_visit);
     }
 }
 
-void after_swap(size_t i, size_t j) {
-    set_entry_index(queue_data[i], i);
-    set_entry_index(queue_data[j], j);
+void on_entry_index_update(Entry* entry, size_t new_index) {
+    if (new_index == (size_t)-1)
+        entry->queue_index = INVALID_INDEX;
+    else {
+        assert(new_index < UINT_MAX);
+        entry->queue_index = new_index;
+    }
 }
 
 void set_solution(Node end) {
-    solution.total_cost = get_total_cost(end);
+    solution.total_cost = get_entry(end)->total_cost;
     solution.length = end.nodes_visited;
     do {
         solution.route[end.nodes_visited - 1] = end.point_index;
@@ -109,8 +107,11 @@ void set_solution(Node end) {
 void reset_priority_search_state(void) {
     for (unsigned short i = 0; i < MAX_POINTS_LEN; ++i) {
         for (unsigned short j = 0; j < MAX_POINTS_LEN; ++j) {
-            entry_indices[i][j] = INVALID_INDEX;
-            total_costs[i][j] = INFINITY;
+            entries[i][j] = (Entry){
+                .nd = {.point_index = i, .nodes_visited = j},
+                .queue_index = INVALID_INDEX,
+                .total_cost = INFINITY,
+            };
         }
     }
 }
@@ -121,58 +122,55 @@ void priority_search_solution(void) {
     Heap queue = {
         .data = queue_data,
         .capacity = QUEUE_CAPACITY,
-        .element_size = sizeof(Node),
         .length = 0,
-        .compare_elements = (heap_comparator)compare_nodes,
-        .after_swap = after_swap,
+        .compare_elements = (heap_comparator)compare_entries,
+        .on_index_update = (heap_on_index_update)on_entry_index_update,
     };
 
-    // Push the first point
-    Node start = {.point_index = 0, .nodes_visited = 1};
-    set_entry_index(start, 0);
-    set_total_cost(start, 0.0);
-    set_previous(start, (Node){0});
-    heap_push(&queue, &start);
+    // Set start node cost to zero and push into the queue
+    entries[0][1].total_cost = 0.0;
+    heap_push(&queue, &entries[0][1]);
 
     // Loop while there are elements
     while (queue.length > 0) {
-        Node popped;
-        heap_pop(&queue, &popped, 0);
-        set_entry_index(popped, INVALID_INDEX);
+        Entry* popped = heap_pop(&queue, 0);
 
         // End reached
-        if (popped.point_index == points_len - 1 &&
-            (max_length == NO_MAX_LEN || popped.nodes_visited == max_length))
-            return set_solution(popped);
+        if (popped->nd.point_index == points_len - 1 &&
+            (max_length == NO_MAX_LEN || popped->nd.nodes_visited == max_length))
+            return set_solution(popped->nd);
 
         // Add adjacent nodes
-        for (unsigned short next_idx = popped.point_index + 1; next_idx < points_len; ++next_idx) {
-            Node next = {.point_index = next_idx, .nodes_visited = popped.nodes_visited + 1};
+        // NOTE: Assumes that the points are sorted
+        for (unsigned short next_idx = popped->nd.point_index + 1; next_idx < points_len;
+             ++next_idx) {
+            Node next_nd = {.point_index = next_idx,
+                            .nodes_visited = popped->nd.nodes_visited + 1};
+            Entry* next = get_entry(next_nd);
 
             // Skip edges not permitted by the max_length limit
-            if (max_length != NO_MAX_LEN && next.nodes_visited > max_length) continue;
+            if (max_length != NO_MAX_LEN && next->nd.nodes_visited > max_length) continue;
 
-            float next_cost = get_total_cost(popped) + edge_costs[popped.point_index][next_idx];
+            // Calculate the alternative cost of getting to the next_nd
+            float alt_cost = popped->total_cost + edge_costs[popped->nd.point_index][next_idx];
 
             // Skip edges for which we have a cheaper route
-            if (next_cost > get_total_cost(next)) continue;
+            if (alt_cost > next->total_cost) continue;
 
             // Skip edges not permitted by the max_fuel limit
-            if (next_cost > max_cost) continue;
+            if (alt_cost > max_cost) continue;
 
-            // Update helper data structures
-            set_total_cost(next, next_cost);
-            set_previous(next, popped);
+            // Remember that the route to `next_nd` via `popped` is better
+            next->total_cost = alt_cost;
+            set_previous(next_nd, popped->nd);
 
             // Push the Node into queue, or, if already exists, sift it down
-            unsigned existing_idx = get_entry_index(next);
-            if (existing_idx != INVALID_INDEX) {
-                // There's an entry to replace
-                heap_sift_down(&queue, existing_idx);
+            if (next->queue_index != INVALID_INDEX) {
+                // Entry already in the queue - restore heap invariant after the cost has decreased
+                heap_sift_down(&queue, next->queue_index);
             } else {
                 // No entry to replace - push into queue
-                set_entry_index(next, queue.length);
-                heap_push(&queue, &next);
+                heap_push(&queue, next);
             }
         }
     }

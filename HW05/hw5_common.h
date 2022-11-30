@@ -68,42 +68,38 @@ void load_points(FILE* f, Point points[MAX_POINTS_LEN], unsigned* length);
 typedef int (*heap_comparator)(void const* a, void const* b);
 
 /**
- * heap_swap_handler is called after 2 elements from the heap were swapped.
- * It may be set to null. The first argument is passed through from `heap.context`
+ * heap_on_index_update is called after an element's position in the queue has changed.
+ * If an element was removed, new_index will be set to `(size_t)-1`.
  */
-typedef void (*heap_swap_handler)(size_t, size_t);
+typedef void (*heap_on_index_update)(void* element, size_t new_index);
 
 /**
- * Heap is a data structure, such that `heap.data[0]` is always the smallest element.
+ * Heap is a container for pointers, such that `heap.data[0]` is always the smallest element.
  *
  * The implementation guarantees never to exceed the provided capacity.
+ *
+ * compare_elements must not be NULL, while on_index_update may be NULL.
  */
 typedef struct {
-    void* data;
+    void** data;
     size_t capacity;
-    size_t element_size;
 
     size_t length;
 
     heap_comparator compare_elements;
-    heap_swap_handler after_swap;
+    heap_on_index_update on_index_update;
 } Heap;
-
-/**
- * Swaps the contents of one memory location with another memory location.
- */
-void memswap(void* restrict from, void* restrict to, size_t bytes);
 
 /**
  * Pushes an element into the MinHeap
  */
-void heap_push(Heap* restrict h, void* restrict element);
+void heap_push(Heap* h, void* element);
 
 /**
  * Pops `heap[index]` element from the heap into `target`.
  * Use index == 0 to pop the smallest element.
  */
-void heap_pop(Heap* restrict h, void* restrict target, size_t index);
+void* heap_pop(Heap* h, size_t index);
 
 /**
  * Moves an element at `index` down until heap invariant is maintained.
