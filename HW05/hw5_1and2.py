@@ -89,6 +89,8 @@ class DijkstraSearch:
             route.append(via.point)
 
         assert len(route) == end.nodes_visited
+        route.reverse()
+
         return route
 
     def do(self) -> tuple[float, list[int]]:
