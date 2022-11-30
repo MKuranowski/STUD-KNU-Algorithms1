@@ -7,8 +7,8 @@ all: hw5_1 hw5_2
 clean:
 	rm -f hw5_1 hw5_2
 
-hw5_1: hw5_common.c hw5_1and2.c
-	$(CC) $(CFLAGS) -DMAX_LEN=30 -o $@ $^ $(LDFLAGS)
+hw5_1: hw5.c
+	$(CC) $(CFLAGS) -DPART=1 -o $@ $^ $(LDFLAGS)
 
-hw5_2: hw5_common.c hw5_1and2.c
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+hw5_2: hw5.c
+	$(CC) $(CFLAGS) -DPART=2 -o $@ $^ $(LDFLAGS)

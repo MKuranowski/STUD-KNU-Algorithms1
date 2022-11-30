@@ -7,15 +7,268 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdnoreturn.h>
+#include <string.h>
 #include <time.h>
 
-#include "hw5_common.h"
+/**
+ * @defgroup Helpers
+ *
+ * This group contains generic helper functions
+ * used throughout the whole program.
+ *
+ * @{
+ */
 
-// Program state
+/**
+ * Prints the provided message to stderr followed by a newline,
+ * then terminates the program by calling exit.
+ */
+noreturn void exit_with_message(char const* msg) {
+    fputs(msg, stderr);
+    fputc('\n', stderr);
+    exit(1);
+}
+
+/**
+ * CMP is a generic macro, which evaluates to:
+ * - `1` if a > b,
+ * - `0` if a == b,
+ * - `-1` if a < b.
+ *
+ * The macro arguments are evaluated twice.
+ */
+#define CMP(a, b) (((a) > (b)) - ((a) < (b)))
+
+/**@}*/
+/**
+ * @defgroup Points
+ *
+ * This group defines the Point structure and
+ * function related to handling them.
+ *
+ * @{
+ */
+
+/**
+ * Point represents a tuple of 2 floats
+ */
+typedef struct {
+    float x;
+    float y;
+} Point;
+
+/**
+ * The expected number of points
+ */
+#define MAX_POINTS_LEN 100
+
+static_assert(MAX_POINTS_LEN < USHRT_MAX, "unsigned short is used to index points");
+
+/**
+ * Compares 2 points lexicographically.
+ */
+int compare_points(void const* a_ptr, void const* b_ptr) {
+    Point const* a = a_ptr;
+    Point const* b = b_ptr;
+
+    if (a->x == b->x) {
+        return (a->y > b->y) - (a->y < b->y);
+    } else {
+        return (a->x > b->x) - (a->x < b->x);
+    }
+}
+
+/**
+ * Calculates the Euclidean distance between 2 points.
+ */
+static inline float distance_between(Point a, Point b) { return hypotf(a.x - b.x, a.y - b.y); }
+
+/**
+ * Loads points from a given file.
+ */
+void load_points(FILE* f, Point points[MAX_POINTS_LEN], unsigned* length) {
+    // Load points count and verify it
+    unsigned points_in_file;
+    if (fscanf(f, "%u", &points_in_file) != 1)
+        exit_with_message("Failed to load point count from input file");
+    if (points_in_file > MAX_POINTS_LEN) exit_with_message("Too many points in input file");
+
+    // Load the points
+    for (size_t i = 0; i < points_in_file; ++i) {
+        if (fscanf(f, "%f %f", &points[i].x, &points[i].y) != 2)
+            exit_with_message("Failed to load point from file");
+    }
+
+    // Sort points (needed for fast evaluation of whether to add a node to a queue)
+    qsort(points, points_in_file, sizeof(Point), compare_points);
+
+    // Save the number of loaded points
+    *length = points_in_file;
+}
+
+/**@}*/
+/**
+ * @defgroup Heap
+ *
+ * This group defines a binary min-heap of pointers
+ * and operations on the heap.
+ *
+ * @{
+ */
+
+/**
+ * heap_comparator should compare elements in the heap.
+ * First argument will be passed through from `heap.context`.
+ *
+ * Must return:
+ * - negative number when a < b
+ * - zero when a == b
+ * - positive number when a > b
+ */
+typedef int (*heap_comparator)(void const* a, void const* b);
+
+/**
+ * heap_on_index_update is called after an element's position in the queue has changed.
+ * If an element was removed, new_index will be set to `(size_t)-1`.
+ */
+typedef void (*heap_on_index_update)(void* element, size_t new_index);
+
+/**
+ * Heap is a container for pointers, such that `heap.data[0]` is always the smallest element.
+ *
+ * The implementation guarantees never to exceed the provided capacity.
+ *
+ * compare_elements must not be NULL, while on_index_update may be NULL.
+ */
+typedef struct {
+    void** data;
+    size_t capacity;
+
+    size_t length;
+
+    heap_comparator compare_elements;
+    heap_on_index_update on_index_update;
+} Heap;
+
+/**
+ * Helper function to swap elements i and j in the heap, and call appropiate callbacks.
+ */
+static inline void heap_swap(Heap* h, size_t i, size_t j) {
+    assert(i != j);
+    assert(i < h->length);
+    assert(j < h->length);
+
+    void* tmp = h->data[i];
+    h->data[i] = h->data[j];
+    h->data[j] = tmp;
+
+    if (h->on_index_update) {
+        h->on_index_update(h->data[i], i);
+        h->on_index_update(h->data[j], j);
+    }
+}
+
+/**
+ * Helper function to call h->compare_elements with elements at indices i and j.
+ */
+static inline int heap_cmp(Heap* h, size_t i, size_t j) {
+    return h->compare_elements(h->data[i], h->data[j]);
+}
+
+/**
+ * Moves an element at `index` down until heap invariant is maintained.
+ * should be called after heap[index] got its value decreased.
+ */
+void heap_sift_down(Heap* h, size_t index) {
+    bool did_swap;
+
+    do {
+        assert(index < h->length);
+        size_t left = 2 * index + 1;
+        size_t right = left + 1;
+
+        size_t smallest = index;
+
+        // Find the smallest element
+        if (left < h->length && heap_cmp(h, left, smallest) < 0) smallest = left;
+        if (right < h->length && heap_cmp(h, right, smallest) < 0) smallest = right;
+
+        // If smallest isn't root - swap it and keep recursing down
+        if (smallest != index) {
+            heap_swap(h, index, smallest);
+            index = smallest;
+            did_swap = true;
+        } else {
+            did_swap = false;
+        }
+    } while (did_swap);
+}
+
+/**
+ * Moves an element at `index` up until heap invariant is maintained.
+ * should be called after heap[index] got its value increased.
+ */
+void heap_sift_up(Heap* h, size_t index) {
+    assert(index < h->length);
+    size_t parent_idx = (index - 1) / 2;
+
+    // Swap `heap[index]` with its parent while it's smaller
+    while (index > 0 && heap_cmp(h, index, parent_idx) < 0) {
+        heap_swap(h, index, parent_idx);
+
+        index = parent_idx;
+        parent_idx = (index - 1) / 2;
+    }
+}
+
+/**
+ * Pushes an element into the MinHeap
+ */
+void heap_push(Heap* h, void* element) {
+    assert(h->length < h->capacity);
+
+    if (h->on_index_update) h->on_index_update(element, h->length);
+    h->data[h->length++] = element;
+
+    heap_sift_up(h, h->length - 1);
+}
+
+/**
+ * Pops `heap[index]` element from the heap into `target`.
+ * Use index == 0 to pop the smallest element.
+ */
+void* heap_pop(Heap* h, size_t index) {
+    assert(index < h->length);
+
+    void* popped = h->data[index];
+
+    // No need to restore heap invariant if last element was removed
+    if (h->length - 1 != index) {
+        heap_swap(h, index, h->length - 1);
+        --h->length;
+        heap_sift_down(h, index);
+    } else {
+        --h->length;
+    }
+
+    if (h->on_index_update) h->on_index_update(popped, (size_t)-1);
+    return popped;
+}
+
+/**@}*/
+/**
+ * @defgroup State
+ *
+ * This group contains statically allocated state of the program.
+ *
+ * @{
+ */
 
 /**
  * All loaded points, sorted lexicographically.
@@ -33,7 +286,15 @@ static unsigned points_len;
  */
 static float edge_costs[MAX_POINTS_LEN][MAX_POINTS_LEN];
 
-// Priority-search data structures
+/**@}*/
+/**
+ * @defgroup Priority Search
+ *
+ * This group contains structures needed to implement the priority search,
+ * statically allocated state of the algorithm and the priority search itself.
+ *
+ * @{
+ */
 
 /**
  * Node literally represents a Vertex in the transformed graph.
@@ -56,8 +317,6 @@ typedef struct {
     float total_cost;
     unsigned queue_index;
 } Entry;
-
-// Priority search related state
 
 /**
  * Flag value for queue_index that represents not-in-queue
@@ -133,13 +392,13 @@ int compare_entries(Entry const* a, Entry const* b) {
 
     if (a_to_visit == b_to_visit && a->nd.nodes_visited == b->nd.nodes_visited) {
         // Case 3: compare used fuel
-        return compare_float_directly(a->total_cost, b->total_cost);
+        return CMP(a->total_cost, b->total_cost);
     } else if (a_to_visit == b_to_visit) {
         // Case 2: compare visited nodes
-        return compare_int_directly(b->nd.nodes_visited, a->nd.nodes_visited);
+        return CMP(b->nd.nodes_visited, a->nd.nodes_visited);
     } else {
         // Case 1: compare nodes that can be (potentially) visited
-        return compare_int_directly(b_to_visit, a_to_visit);
+        return CMP(b_to_visit, a_to_visit);
     }
 }
 
@@ -168,6 +427,9 @@ void set_solution(Node end) {
     } while (end.nodes_visited > 0);
 }
 
+/**
+ * Initializes the priority search state.
+*/
 void reset_priority_search_state(void) {
     for (unsigned short i = 0; i < MAX_POINTS_LEN; ++i) {
         for (unsigned short j = 0; j < MAX_POINTS_LEN; ++j) {
@@ -180,6 +442,9 @@ void reset_priority_search_state(void) {
     }
 }
 
+/**
+ * Performs the priority search.
+*/
 void priority_search_solution(float max_cost, unsigned short max_length) {
     // Prepare data structures
     reset_priority_search_state();
@@ -246,17 +511,14 @@ void priority_search_solution(float max_cost, unsigned short max_length) {
     return;
 }
 
-// Main entry point
-
-// Default to no length limit (for HW5-2)
-#ifndef MAX_LEN
-#define MAX_LEN NO_MAX_LEN
-#endif
-
-// static float max_costs[] = {29.0, 45.0, 77.0, 150.0};  // for 20 points
-static float max_costs[] = {300.0, 450.0, 850.0, 1150.0};  // for 100 points
-
-static float max_costs_len = sizeof(max_costs) / sizeof(max_costs[0]);
+/**@}*/
+/**
+ * @defgroup Main
+ *
+ * This group contains the main entry point of the program
+ *
+ * @{
+ */
 
 /**
  * Pre-calculates the `edge_costs` table.
@@ -272,40 +534,94 @@ void calculate_edge_costs(void) {
     }
 }
 
-int main(int argc, char** argv) {
-    // Get the input file
-    FILE* input = NULL;
+/**
+ * Tries to open the input file if provided in argument,
+ * or returns stdin if no arguments were provided.
+*/
+FILE* figure_out_input_file(int argc, char** argv) {
     if (argc < 2) {
         // No arguments - read from standard input
-        input = stdin;
+        return stdin;
     } else if (argc == 2) {
         // Single argument - file name
-        input = fopen(argv[1], "r");
+        FILE* input = fopen(argv[1], "r");
         if (!input) {
             perror("fopen");
             exit(1);
         }
+        return input;
     } else {
         exit_with_message("Usage: ./hw5 [input_file.txt]");
     }
+
+}
+
+/**
+ * Dumps the solution into the sink, as described in the problem PDF.
+ * Only prints the max allowed cost if it's normal.
+ */
+void dump_solution(FILE* sink, float max_cost, clock_t elapsed) {
+    if (isnormal(max_cost)) {
+        fprintf(sink, "%.0f %.1f (%hu points)\n", max_cost, solution.total_cost, solution.length);
+    } else {
+        fprintf(sink, "%.1f (%hu points)\n", solution.total_cost, solution.length);
+    }
+
+    for (size_t i = 0; i < solution.length; ++i) {
+        Point pt = points[solution.route[i]];
+        fprintf(sink, "%.0f %.0f  ", pt.x, pt.y);
+    }
+    fputc('\n', stdout);
+    printf("%.5f seconds\n\n", (float)elapsed / CLOCKS_PER_SEC);
+}
+
+static float max_costs[] = {300.0, 450.0, 850.0, 1150.0};
+static float max_costs_len = sizeof(max_costs) / sizeof(max_costs[0]);
+
+#if PART == 1
+
+void run(void) {
+    clock_t elapsed = clock();
+    priority_search_solution(INFINITY, 30);
+    elapsed = clock() - elapsed;
+
+    dump_solution(stdout, NAN, elapsed);
+}
+
+#elif PART == 2
+
+void run(void) {
+    for (size_t i = 0; i < max_costs_len; ++i) {
+        clock_t elapsed = clock();
+        priority_search_solution(max_costs[i], NO_MAX_LEN);
+        elapsed = clock() - elapsed;
+
+        dump_solution(stdout, max_costs[i], elapsed);
+    }
+}
+
+#else
+#error "PART must be defined and set to either '1' or '2'"
+#endif
+
+int main(int argc, char** argv) {
+    // Get the input file
+    FILE* input = figure_out_input_file(argc, argv);
 
     // Load the inputs
     load_points(input, points, &points_len);
     calculate_edge_costs();
 
-    // Do the searches
-    for (size_t i = 0; i < max_costs_len; ++i) {
-        clock_t elapsed = clock();
-        priority_search_solution(max_costs[i], MAX_LEN);
-        elapsed = clock() - elapsed;
+    // Run the appropiate solver
+    run();
 
-        // Print the solution
-        printf("%.0f %.1f (%hu points)\n", max_costs[i], solution.total_cost, solution.length);
-        for (size_t i = 0; i < solution.length; ++i) {
-            Point pt = points[solution.route[i]];
-            printf("%.0f %.0f\t", pt.x, pt.y);
-        }
-        fputc('\n', stdout);
-        printf("%.5f seconds\n\n", (float)elapsed / CLOCKS_PER_SEC);
+    // Close the input file
+    if (fclose(input)) {
+        perror("fclose");
+        exit(1);
     }
+
+    return 0;
 }
+
+/**@}*/
