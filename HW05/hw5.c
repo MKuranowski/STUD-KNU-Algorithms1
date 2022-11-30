@@ -569,7 +569,7 @@ void dump_solution(FILE* sink, float max_cost, clock_t elapsed) {
 
     for (size_t i = 0; i < solution.length; ++i) {
         Point pt = points[solution.route[i]];
-        fprintf(sink, "%.0f %.0f  ", pt.x, pt.y);
+        fprintf(sink, "%.0f %.0f\t", pt.x, pt.y);
     }
     fputc('\n', stdout);
     printf("%.5f seconds\n\n", (float)elapsed / CLOCKS_PER_SEC);
