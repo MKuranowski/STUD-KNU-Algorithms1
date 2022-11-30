@@ -356,6 +356,11 @@ static Entry entries[MAX_POINTS_LEN][MAX_POINTS_LEN];
  */
 static Node previous[MAX_POINTS_LEN][MAX_POINTS_LEN];
 
+/**
+ * The start and end point of the current search
+ */
+unsigned short static_start, static_end;
+
 // Priority search
 
 /**
@@ -387,8 +392,8 @@ int compare_entries(Entry const* a, Entry const* b) {
     //
     // Since we'll be implementing a min-heap; this function should
     // return -1 if a is better than b; 1 if b is better than a or 0 if there are the same.
-    unsigned a_to_visit = points_len - a->nd.point_index - 1;
-    unsigned b_to_visit = points_len - b->nd.point_index - 1;
+    unsigned a_to_visit = abs((int)static_end - (int)a->nd.point_index);
+    unsigned b_to_visit = abs((int)static_end - (int)b->nd.point_index);
 
     if (a_to_visit == b_to_visit && a->nd.nodes_visited == b->nd.nodes_visited) {
         // Case 3: compare used fuel
@@ -447,6 +452,10 @@ void reset_priority_search_state(void) {
  */
 void priority_search_solution(unsigned short start, unsigned short end, float max_cost,
                               unsigned short max_length, Solution* solution) {
+    // Set the static_start and static_end for proper nodes_to_visit calculation
+    static_start = start;
+    static_end = end;
+
     // Check whether we are performing a forward or backward search
     int expected_direction = CMP(start, end);
 
