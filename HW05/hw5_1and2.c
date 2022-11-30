@@ -1,3 +1,10 @@
+/*
+ * ID: 2020427681
+ * NAME: Mikolaj Kuranowski
+ * OS: Debian 11
+ * Compiler version: gcc 12.2.0
+ */
+
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -10,44 +17,80 @@
 
 // Program state
 
+/**
+ * All loaded points, sorted lexicographically.
+ */
 static Point points[MAX_POINTS_LEN];
+
+/**
+ * Number of loaded points.
+ */
 static unsigned points_len;
 
+/**
+ * Precalculated distances between points.
+ * INFINITY if it's not possible to traverse an edge.
+ */
 static float edge_costs[MAX_POINTS_LEN][MAX_POINTS_LEN];
 
 // Priority-search data structures
 
+/**
+ * Node literally represents a Vertex in the transformed graph.
+ */
 typedef struct {
     unsigned short point_index;
     unsigned short nodes_visited;
 } Node;
 
+/**
+ * Entry represents a candidate to expand in the priority search.
+ *
+ * There must be at most one Entry corresponding to a given Node.
+ *
+ * Entry may not necessarily be in the queue (e.g. if the corresponding node has been visited) -
+ * in this case `queue_index` is set to INVALID_INDEX.
+ */
 typedef struct {
-    Node nd;  // NOTE: nd must be first to ensure (Entry*) can be casted to (Node*)
+    Node nd;
     float total_cost;
     unsigned queue_index;
 } Entry;
 
 // Priority search related state
 
+/**
+ * Flag value for queue_index that represents not-in-queue
+ */
 #define INVALID_INDEX UINT_MAX
-#define NO_MAX_LEN USHRT_MAX
-#define QUEUE_CAPACITY (MAX_POINTS_LEN * MAX_POINTS_LEN)
 
+/**
+ * Flag value for the search to not limit the number of nodes
+ */
+#define NO_MAX_LEN USHRT_MAX
+
+#define QUEUE_CAPACITY (MAX_POINTS_LEN * MAX_POINTS_LEN)
 static_assert(QUEUE_CAPACITY < UINT_MAX, "unsigned int will be used to index the queue");
 
-static float max_cost;
-
-#ifdef MAX_LEN
-static unsigned short max_length = MAX_LEN;
-#else
-static unsigned short max_length = NO_MAX_LEN;
-#endif
-
+/**
+ * Statically allocated space for the priority queue data.
+ */
 static void* queue_data[QUEUE_CAPACITY];
+
+/**
+ * Statically allocated space for all possible Entries.
+ */
 static Entry entries[MAX_POINTS_LEN][MAX_POINTS_LEN];
+
+/**
+ * Statically allocated space for all possible previous mappings,
+ * for the reconstruction of the solution path.
+ */
 static Node previous[MAX_POINTS_LEN][MAX_POINTS_LEN];
 
+/**
+ * Statically allocated solution.
+ */
 static struct {
     float total_cost;
     unsigned short length;
@@ -56,14 +99,28 @@ static struct {
 
 // Priority search
 
+/**
+ * Finds an Entry corresponding to a given Node.
+ */
 static inline Entry* get_entry(Node n) { return &entries[n.point_index][n.nodes_visited]; }
+
+/**
+ * Finds the node that should precede given Node.
+ */
 static inline Node get_previous(Node to) { return previous[to.point_index][to.nodes_visited]; }
+
+/**
+ * Updates the previous mapping, denoting that to get to `to` one must go from `from`.
+ */
 static inline void set_previous(Node to, Node from) {
     previous[to.point_index][to.nodes_visited] = from;
 }
 
+/**
+ * Compares two Entries, picking which one is better to expand first.
+ */
 int compare_entries(Entry const* a, Entry const* b) {
-    // To ensure we get the best candidate in main Dijkstra loop, we need
+    // To ensure we get the best candidate in main priority search loop, we need
     // the comparison to prefer the following properties, in order:
     // 1. More nodes can be visited
     // 2. More nodes have already been visited
@@ -86,6 +143,9 @@ int compare_entries(Entry const* a, Entry const* b) {
     }
 }
 
+/**
+ * Simple handler to set entry->queue_index.
+ */
 void on_entry_index_update(Entry* entry, size_t new_index) {
     if (new_index == (size_t)-1)
         entry->queue_index = INVALID_INDEX;
@@ -95,6 +155,10 @@ void on_entry_index_update(Entry* entry, size_t new_index) {
     }
 }
 
+/**
+ * Sets `solution` after reaching the end node.
+ * The entry in `previous` for the start node must have its node_visited set to 0.
+ */
 void set_solution(Node end) {
     solution.total_cost = get_entry(end)->total_cost;
     solution.length = end.nodes_visited;
@@ -116,7 +180,7 @@ void reset_priority_search_state(void) {
     }
 }
 
-void priority_search_solution(void) {
+void priority_search_solution(float max_cost, unsigned short max_length) {
     // Prepare data structures
     reset_priority_search_state();
     Heap queue = {
@@ -127,8 +191,10 @@ void priority_search_solution(void) {
         .on_index_update = (heap_on_index_update)on_entry_index_update,
     };
 
-    // Set start node cost to zero and push into the queue
-    entries[0][1].total_cost = 0.0;
+    // Initialize start entry to zero and push into the queue
+    Entry* start = get_entry((Node){0, 1});
+    start->total_cost = 0.0;
+    set_previous(start->nd, (Node){0, 0});
     heap_push(&queue, &entries[0][1]);
 
     // Loop while there are elements
@@ -144,8 +210,7 @@ void priority_search_solution(void) {
         // NOTE: Assumes that the points are sorted
         for (unsigned short next_idx = popped->nd.point_index + 1; next_idx < points_len;
              ++next_idx) {
-            Node next_nd = {.point_index = next_idx,
-                            .nodes_visited = popped->nd.nodes_visited + 1};
+            Node next_nd = {next_idx, popped->nd.nodes_visited + 1};
             Entry* next = get_entry(next_nd);
 
             // Skip edges not permitted by the max_length limit
@@ -183,11 +248,19 @@ void priority_search_solution(void) {
 
 // Main entry point
 
+// Default to no length limit (for HW5-2)
+#ifndef MAX_LEN
+#define MAX_LEN NO_MAX_LEN
+#endif
+
 static float max_costs[] = {29.0, 45.0, 77.0, 150.0};  // for 20 points
 // static float max_costs[] = {300.0, 450.0, 850.0, 1150.0};  // for 100 points
 
 static float max_costs_len = sizeof(max_costs) / sizeof(max_costs[0]);
 
+/**
+ * Pre-calculates the `edge_costs` table.
+ */
 void calculate_edge_costs(void) {
     for (unsigned from = 0; from < points_len; ++from) {
         for (unsigned to = 0; to < points_len; ++to) {
@@ -222,10 +295,8 @@ int main(int argc, char** argv) {
 
     // Do the searches
     for (size_t i = 0; i < max_costs_len; ++i) {
-        max_cost = max_costs[i];
-
         clock_t elapsed = clock();
-        priority_search_solution();
+        priority_search_solution(max_costs[i], MAX_LEN);
         elapsed = clock() - elapsed;
 
         // Print the solution
