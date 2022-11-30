@@ -45,6 +45,14 @@ noreturn void exit_with_message(char const* msg) {
  */
 #define CMP(a, b) (((a) > (b)) - ((a) < (b)))
 
+/**
+ * Clamps the given value between two boundaries. In other words, returns:
+ * - `lo` if x < lo
+ * - `hi` if x > hi
+ * - `x`  otherwise
+ */
+float clamp(float x, float lo, float hi) { return fmaxf(fminf(x, hi), lo); }
+
 /**@}*/
 /**
  * @defgroup Points
@@ -323,7 +331,7 @@ typedef struct {
  */
 typedef struct {
     float total_cost;
-    unsigned short length;
+    unsigned length;
     unsigned short route[MAX_POINTS_LEN * 2];  // solution for part 3 we may need more space
 } Solution;
 
@@ -582,10 +590,9 @@ FILE* figure_out_input_file(int argc, char** argv) {
  */
 void dump_solution(FILE* sink, Solution* solution, float max_cost, clock_t elapsed) {
     if (isnormal(max_cost)) {
-        fprintf(sink, "%.0f %.1f (%hu points)\n", max_cost, solution->total_cost,
-                solution->length);
+        fprintf(sink, "%.0f %.1f (%u points)\n", max_cost, solution->total_cost, solution->length);
     } else {
-        fprintf(sink, "%.1f (%hu points)\n", solution->total_cost, solution->length);
+        fprintf(sink, "%.1f (%u points)\n", solution->total_cost, solution->length);
     }
 
     for (size_t i = 0; i < solution->length; ++i) {
@@ -625,8 +632,52 @@ void run(void) {
     }
 }
 
+#elif PART == 3
+
+#define RATIO 0.5
+
+void run(void) {
+    Solution solution_overall = {0};
+    Solution solution_forward = {0};
+    Solution solution_backward = {0};
+    float min_leg_cost = edge_costs[0][points_len - 1];
+
+    for (size_t i = 0; i < max_costs_len; ++i) {
+        float const max_cost = max_costs[i];
+        clock_t elapsed = clock();
+
+        // Clear disallowed points
+        memset(disallowed_points, 0, sizeof(disallowed_points));
+
+        // Find the forward route
+        float cost_cap = clamp(max_cost * RATIO, min_leg_cost, max_cost - min_leg_cost);
+        priority_search_solution(0, points_len - 1, cost_cap, NO_MAX_LEN, &solution_forward);
+
+        // Update the disallowed points
+        for (unsigned short i = 1; i < solution_forward.length - 1; ++i)
+            disallowed_points[solution_forward.route[i]] = true;
+
+        // Find the backward route
+        cost_cap = max_cost - solution_forward.total_cost;
+        priority_search_solution(points_len - 1, 0, cost_cap, NO_MAX_LEN, &solution_backward);
+
+        // Combine the solutions
+        solution_overall.total_cost = solution_forward.total_cost + solution_backward.total_cost;
+        unsigned j = 0;
+        for (unsigned k = 0; k < solution_forward.length; ++k)
+            solution_overall.route[j++] = solution_forward.route[k];
+        for (unsigned k = 1; k < solution_backward.length; ++k)
+            solution_overall.route[j++] = solution_backward.route[k];
+        solution_overall.length = j;
+
+        // Print the solution
+        elapsed = clock() - elapsed;
+        dump_solution(stdout, &solution_overall, max_cost, elapsed);
+    }
+}
+
 #else
-#error "PART must be defined and set to either '1' or '2'"
+#error "PART must be defined and set to either 1, 2 or 3"
 #endif
 
 int main(int argc, char** argv) {
