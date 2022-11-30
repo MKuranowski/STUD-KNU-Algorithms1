@@ -97,10 +97,10 @@ class DijkstraSearch:
         end = len(self.pts) - 1
         self.queue = [
             DijkstraSearchEntry(
-            point=0,
-            nodes_visited=1,
-            nodes_to_visit=end,
-            total_cost=0.0,
+                point=0,
+                nodes_visited=1,
+                nodes_to_visit=end,
+                total_cost=0.0,
             )
         ]
         self.entries = {self.queue[0].node: self.queue[0]}
@@ -172,7 +172,10 @@ def main() -> None:
 
     dijkstra = DijkstraSearch(pts, distances, inf, args.length)
 
-    for max_fuel in [29.0, 45.0, 77.0, 150.0]:
+    max_fuels = [29.0, 45.0, 77.0, 150.0]  # for 20 points
+    # max_fuels = [300.0, 450.0, 850.0, 1150.0]  # for 100 points
+
+    for max_fuel in max_fuels:
         dijkstra.max_cost = max_fuel
 
         elapsed = perf_counter()
