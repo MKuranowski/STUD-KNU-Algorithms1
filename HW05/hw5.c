@@ -359,7 +359,13 @@ static Node previous[MAX_POINTS_LEN][MAX_POINTS_LEN];
 /**
  * The start and end point of the current search
  */
-unsigned short static_start, static_end;
+static unsigned short static_start, static_end;
+
+/**
+ * Set to True if a point cannot be used in the current search.
+ * Only used for part 3.
+ */
+static bool disallowed_points[MAX_POINTS_LEN] = {0};
 
 // Priority search
 
@@ -488,6 +494,9 @@ void priority_search_solution(unsigned short start, unsigned short end, float ma
         for (unsigned short next_idx = 0; next_idx < points_len; ++next_idx) {
             // Check if next_idx is in the direction we're travelling
             if (CMP(popped->nd.point_index, next_idx) != expected_direction) continue;
+
+            // Skip if next_idx if not allowed
+            if (disallowed_points[next_idx]) continue;
 
             // Get the Entry to the next node
             Node next_nd = {next_idx, popped->nd.nodes_visited + 1};
