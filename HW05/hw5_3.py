@@ -215,10 +215,10 @@ def main() -> None:
         elapsed = perf_counter() - elapsed
 
         print(f"{max_fuel:.0f} {used_fuel:.1f} ({len(route)} points)")
-        # for idx in route:
-        #     pt = pts[idx]
-        #     print(f"{pt[0]:.0f} {pt[1]:.0f}", end="\t")
-        # print()
+        for idx in route:
+            pt = pts[idx]
+            print(f"{pt[0]:.0f} {pt[1]:.0f}", end="\t")
+        print()
         print(f"{elapsed:.5f} seconds", end="\n\n")
 
 
