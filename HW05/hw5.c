@@ -319,6 +319,15 @@ typedef struct {
 } Entry;
 
 /**
+ * Solution describes the result of priority search algorithm.
+ */
+typedef struct {
+    float total_cost;
+    unsigned short length;
+    unsigned short route[MAX_POINTS_LEN * 2];  // solution for part 3 we may need more space
+} Solution;
+
+/**
  * Flag value for queue_index that represents not-in-queue
  */
 #define INVALID_INDEX UINT_MAX
@@ -346,15 +355,6 @@ static Entry entries[MAX_POINTS_LEN][MAX_POINTS_LEN];
  * for the reconstruction of the solution path.
  */
 static Node previous[MAX_POINTS_LEN][MAX_POINTS_LEN];
-
-/**
- * Statically allocated solution.
- */
-static struct {
-    float total_cost;
-    unsigned short length;
-    unsigned short route[MAX_POINTS_LEN];
-} solution;
 
 // Priority search
 
@@ -418,18 +418,18 @@ void on_entry_index_update(Entry* entry, size_t new_index) {
  * Sets `solution` after reaching the end node.
  * The entry in `previous` for the start node must have its node_visited set to 0.
  */
-void set_solution(Node end) {
-    solution.total_cost = get_entry(end)->total_cost;
-    solution.length = end.nodes_visited;
+void set_solution(Solution* solution, Node end) {
+    solution->total_cost = get_entry(end)->total_cost;
+    solution->length = end.nodes_visited;
     do {
-        solution.route[end.nodes_visited - 1] = end.point_index;
+        solution->route[end.nodes_visited - 1] = end.point_index;
         end = get_previous(end);
     } while (end.nodes_visited > 0);
 }
 
 /**
  * Initializes the priority search state.
-*/
+ */
 void reset_priority_search_state(void) {
     for (unsigned short i = 0; i < MAX_POINTS_LEN; ++i) {
         for (unsigned short j = 0; j < MAX_POINTS_LEN; ++j) {
@@ -444,8 +444,12 @@ void reset_priority_search_state(void) {
 
 /**
  * Performs the priority search.
-*/
-void priority_search_solution(float max_cost, unsigned short max_length) {
+ */
+void priority_search_solution(unsigned short start, unsigned short end, float max_cost,
+                              unsigned short max_length, Solution* solution) {
+    // Check whether we are performing a forward or backward search
+    int expected_direction = CMP(start, end);
+
     // Prepare data structures
     reset_priority_search_state();
     Heap queue = {
@@ -457,24 +461,26 @@ void priority_search_solution(float max_cost, unsigned short max_length) {
     };
 
     // Initialize start entry to zero and push into the queue
-    Entry* start = get_entry((Node){0, 1});
-    start->total_cost = 0.0;
-    set_previous(start->nd, (Node){0, 0});
-    heap_push(&queue, &entries[0][1]);
+    Entry* start_entry = get_entry((Node){start, 1});
+    start_entry->total_cost = 0.0;
+    set_previous(start_entry->nd, (Node){0, 0});
+    heap_push(&queue, start_entry);
 
     // Loop while there are elements
     while (queue.length > 0) {
         Entry* popped = heap_pop(&queue, 0);
 
         // End reached
-        if (popped->nd.point_index == points_len - 1 &&
+        if (popped->nd.point_index == end &&
             (max_length == NO_MAX_LEN || popped->nd.nodes_visited == max_length))
-            return set_solution(popped->nd);
+            return set_solution(solution, popped->nd);
 
         // Add adjacent nodes
-        // NOTE: Assumes that the points are sorted
-        for (unsigned short next_idx = popped->nd.point_index + 1; next_idx < points_len;
-             ++next_idx) {
+        for (unsigned short next_idx = 0; next_idx < points_len; ++next_idx) {
+            // Check if next_idx is in the direction we're travelling
+            if (CMP(popped->nd.point_index, next_idx) != expected_direction) continue;
+
+            // Get the Entry to the next node
             Node next_nd = {next_idx, popped->nd.nodes_visited + 1};
             Entry* next = get_entry(next_nd);
 
@@ -506,8 +512,8 @@ void priority_search_solution(float max_cost, unsigned short max_length) {
     }
 
     // No solution
-    solution.total_cost = INFINITY;
-    solution.length = 0;
+    solution->total_cost = INFINITY;
+    solution->length = 0;
     return;
 }
 
@@ -526,10 +532,7 @@ void priority_search_solution(float max_cost, unsigned short max_length) {
 void calculate_edge_costs(void) {
     for (unsigned from = 0; from < points_len; ++from) {
         for (unsigned to = 0; to < points_len; ++to) {
-            if (from < to)
-                edge_costs[from][to] = distance_between(points[from], points[to]);
-            else
-                edge_costs[from][to] = INFINITY;
+            edge_costs[from][to] = distance_between(points[from], points[to]);
         }
     }
 }
@@ -537,7 +540,7 @@ void calculate_edge_costs(void) {
 /**
  * Tries to open the input file if provided in argument,
  * or returns stdin if no arguments were provided.
-*/
+ */
 FILE* figure_out_input_file(int argc, char** argv) {
     if (argc < 2) {
         // No arguments - read from standard input
@@ -553,22 +556,22 @@ FILE* figure_out_input_file(int argc, char** argv) {
     } else {
         exit_with_message("Usage: ./hw5 [input_file.txt]");
     }
-
 }
 
 /**
  * Dumps the solution into the sink, as described in the problem PDF.
  * Only prints the max allowed cost if it's normal.
  */
-void dump_solution(FILE* sink, float max_cost, clock_t elapsed) {
+void dump_solution(FILE* sink, Solution* solution, float max_cost, clock_t elapsed) {
     if (isnormal(max_cost)) {
-        fprintf(sink, "%.0f %.1f (%hu points)\n", max_cost, solution.total_cost, solution.length);
+        fprintf(sink, "%.0f %.1f (%hu points)\n", max_cost, solution->total_cost,
+                solution->length);
     } else {
-        fprintf(sink, "%.1f (%hu points)\n", solution.total_cost, solution.length);
+        fprintf(sink, "%.1f (%hu points)\n", solution->total_cost, solution->length);
     }
 
-    for (size_t i = 0; i < solution.length; ++i) {
-        Point pt = points[solution.route[i]];
+    for (size_t i = 0; i < solution->length; ++i) {
+        Point pt = points[solution->route[i]];
         fprintf(sink, "%.0f %.0f\t", pt.x, pt.y);
     }
     fputc('\n', stdout);
@@ -581,22 +584,26 @@ static float max_costs_len = sizeof(max_costs) / sizeof(max_costs[0]);
 #if PART == 1
 
 void run(void) {
+    Solution solution;
+
     clock_t elapsed = clock();
-    priority_search_solution(INFINITY, 30);
+    priority_search_solution(0, points_len - 1, INFINITY, 30, &solution);
     elapsed = clock() - elapsed;
 
-    dump_solution(stdout, NAN, elapsed);
+    dump_solution(stdout, &solution, NAN, elapsed);
 }
 
 #elif PART == 2
 
 void run(void) {
+    Solution solution;
+
     for (size_t i = 0; i < max_costs_len; ++i) {
         clock_t elapsed = clock();
-        priority_search_solution(max_costs[i], NO_MAX_LEN);
+        priority_search_solution(0, points_len - 1, max_costs[i], NO_MAX_LEN, &solution);
         elapsed = clock() - elapsed;
 
-        dump_solution(stdout, max_costs[i], elapsed);
+        dump_solution(stdout, &solution, max_costs[i], elapsed);
     }
 }
 
