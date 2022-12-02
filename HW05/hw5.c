@@ -500,7 +500,7 @@ void priority_search_solution(unsigned short start, unsigned short end, float ma
 
         // Add adjacent nodes
         for (unsigned short next_idx = 0; next_idx < points_len; ++next_idx) {
-            // Check if next_idx is in the direction we're travelling
+            // Check if next_idx is in the direction we're traveling
             if (CMP(popped->nd.point_index, next_idx) != expected_direction) continue;
 
             // Skip if next_idx if not allowed
