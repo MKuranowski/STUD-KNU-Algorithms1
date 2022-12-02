@@ -158,6 +158,40 @@ class DijkstraSearch:
         return inf, []
 
 
+def part1(dijkstra: DijkstraSearch) -> None:
+    dijkstra.max_cost = inf
+
+    elapsed = perf_counter()
+    used_fuel, route = dijkstra.do()
+    elapsed = perf_counter() - elapsed
+
+    print(f"{used_fuel:.1f} ({len(route)} points)")
+    for idx in route:
+        pt = dijkstra.pts[idx]
+        print(f"{pt[0]:.0f} {pt[1]:.0f}", end="\t")
+    print()
+    print(f"{elapsed:.5f} seconds", end="\n\n")
+
+
+def part2(dijkstra: DijkstraSearch) -> None:
+    # max_fuels = [29.0, 45.0, 77.0, 150.0]  # for 20 points
+    max_fuels = [300.0, 450.0, 850.0, 1150.0]  # for 100 points
+
+    for max_fuel in max_fuels:
+        dijkstra.max_cost = max_fuel
+
+        elapsed = perf_counter()
+        used_fuel, route = dijkstra.do()
+        elapsed = perf_counter() - elapsed
+
+        print(f"{max_fuel:.0f} {used_fuel:.1f} ({len(route)} points)")
+        for idx in route:
+            pt = dijkstra.pts[idx]
+            print(f"{pt[0]:.0f} {pt[1]:.0f}", end="\t")
+        print()
+        print(f"{elapsed:.5f} seconds", end="\n\n")
+
+
 def main() -> None:
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--length", type=int, help="expected route length")
@@ -169,25 +203,12 @@ def main() -> None:
         pts = load_points(f)
 
     distances = calc_distances(pts)
-
     dijkstra = DijkstraSearch(pts, distances, inf, args.length)
 
-    max_fuels = [29.0, 45.0, 77.0, 150.0]  # for 20 points
-    # max_fuels = [300.0, 450.0, 850.0, 1150.0]  # for 100 points
-
-    for max_fuel in max_fuels:
-        dijkstra.max_cost = max_fuel
-
-        elapsed = perf_counter()
-        used_fuel, route = dijkstra.do()
-        elapsed = perf_counter() - elapsed
-
-        print(f"{max_fuel:.0f} {used_fuel:.1f} ({len(route)} points)")
-        for idx in route:
-            pt = pts[idx]
-            print(f"{pt[0]:.0f} {pt[1]:.0f}", end="\t")
-        print()
-        print(f"{elapsed:.5f} seconds", end="\n\n")
+    if args.length is not None:
+        part1(dijkstra)
+    else:
+        part2(dijkstra)
 
 
 if __name__ == "__main__":
