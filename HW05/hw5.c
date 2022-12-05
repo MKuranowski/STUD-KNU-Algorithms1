@@ -290,7 +290,7 @@ static unsigned points_len;
 
 /**
  * Precalculated distances between points.
- * INFINITY if it's not possible to traverse an edge.
+ * HUGE_VALF if it's not possible to traverse an edge.
  */
 static float edge_costs[MAX_POINTS_LEN][MAX_POINTS_LEN];
 
@@ -455,7 +455,7 @@ void reset_priority_search_state(void) {
             entries[i][j] = (Entry){
                 .nd = {.point_index = i, .nodes_visited = j},
                 .queue_index = INVALID_INDEX,
-                .total_cost = INFINITY,
+                .total_cost = HUGE_VALF,
             };
         }
     }
@@ -538,7 +538,7 @@ void priority_search_solution(unsigned short start, unsigned short end, float ma
     }
 
     // No solution
-    solution->total_cost = INFINITY;
+    solution->total_cost = HUGE_VALF;
     solution->length = 0;
     return;
 }
@@ -612,7 +612,7 @@ void run(void) {
     Solution solution;
 
     clock_t elapsed = clock();
-    priority_search_solution(0, points_len - 1, INFINITY, 30, &solution);
+    priority_search_solution(0, points_len - 1, HUGE_VALF, 30, &solution);
     elapsed = clock() - elapsed;
 
     dump_solution(stdout, &solution, NAN, elapsed);
